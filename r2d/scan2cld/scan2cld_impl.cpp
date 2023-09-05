@@ -6,6 +6,9 @@
 
 using namespace r2d;
 
+#define RAD2DEG(x) ((x) / M_PI * 180.0)
+#define DEG2RAD(x) ((x) / 180.0 * M_PI)
+
 scan2cld_impl::scan2cld_impl(std::shared_ptr<rclcpp::Node> node) : ndp_(node) {
   load_param();
 }
@@ -41,7 +44,7 @@ scan2cld_impl::process(const sensor_msgs::msg::LaserScan &msg) {
     p.x = p_world[0];
     p.y = p_world[1];
     p.z = p_world[2];
-    T_lm_m = T_inc * T_lm_m;
+    T_lm_m = T_inc_ * T_lm_m;
     rad_local_point += msg.angle_increment;
   }
 
@@ -66,16 +69,17 @@ void scan2cld_impl::load_param() {
   is_positive_rotate_ =
       ndp_->get_parameter("r2d.scan2cld.is_positive_rotate").as_bool();
   rotation_axis_ << axis[0], axis[1], axis[2];
+  rotation_speed_ = DEG2RAD(rotation_speed_);
 }
 
 scan2cld_impl::transform_t scan2cld_impl::load_transform(std::string name) {
   Eigen::Matrix4d mat;
+  std::vector<double> row;
   name = "r2d.scan2cld." + name + ".";
   for (int i = 0; i < 4; i++) {
-    ndp_->declare_parameter(name + "row" + std::to_string(i + 1),
-                            std::vector<double>{});
-    const auto &row = ndp_->get_parameter(name + "row" + std::to_string(i + 1))
-                          .as_double_array();
+    auto param_name = name + "row" + std::to_string(i + 1);
+    ndp_->declare_parameter(param_name,row);
+    ndp_->get_parameter(param_name, row);
     mat.row(i) << row[0], row[1], row[2], row[3];
   }
   return transform_t{mat};
@@ -83,15 +87,15 @@ scan2cld_impl::transform_t scan2cld_impl::load_transform(std::string name) {
 
 void scan2cld_impl::update_scan_info(
     const sensor_msgs::msg::LaserScan &msg) {
-  static bool is_updated_ = false;
-  if (is_updated_)
-    return;
-  is_updated_ = true;
+  // static bool is_updated_ = false;
+  // if (is_updated_)
+  //   return;
+  // is_updated_ = true;
   time_one_msg_ = msg.scan_time;
   time_inc_ = msg.time_increment;
   time_blind_ = time_one_msg_ - msg.intensities.size() * time_inc_;
   rad_inc_per_point_ =
       (is_positive_rotate_ ? 1 : -1) * rotation_speed_ * time_inc_;
-  T_inc.linear() =
+  T_inc_.linear() =
       Eigen::AngleAxisd(rad_inc_per_point_, rotation_axis_).toRotationMatrix();
 }

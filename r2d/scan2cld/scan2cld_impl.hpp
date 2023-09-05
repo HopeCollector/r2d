@@ -28,7 +28,7 @@ private:
   std::shared_ptr<rclcpp::Node> ndp_;
   transform_t T_lb_lm_{transform_t::Identity()};
   transform_t T_m_w_{transform_t::Identity()};
-  transform_t T_inc{transform_t::Identity()};
+  transform_t T_inc_{transform_t::Identity()};
   Eigen::Vector3d rotation_axis_{Eigen::Vector3d::UnitX()};
   double rotation_speed_{0.0};
   bool is_positive_rotate_{true};
